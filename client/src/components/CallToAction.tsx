@@ -1,14 +1,14 @@
-import React from 'react';
+import React from "react";
 
 const CallToAction = () => {
   return (
     <section className="relative w-full bg-[#3b63f6] overflow-hidden py-20">
-      {/* Декоративний фоновий патерн (крапочки) */}
-      <div 
-        className="absolute inset-0 opacity-10 pointer-events-none" 
-        style={{ 
-          backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', 
-          backgroundSize: '40px 40px' 
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+          backgroundSize: "40px 40px",
         }}
       ></div>
 
@@ -16,7 +16,7 @@ const CallToAction = () => {
         <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
           Готовий продати або купити?
         </h2>
-        
+
         <p className="text-lg text-blue-100 mb-10 max-w-2xl">
           Приєднуйся до тисяч студентів, які вже використовують UniMarket
         </p>
@@ -25,7 +25,7 @@ const CallToAction = () => {
           <button className="w-full sm:w-auto bg-white text-[#3b63f6] px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors shadow-lg">
             Зареєструватись безкоштовно
           </button>
-          
+
           <button className="w-full sm:w-auto bg-transparent border border-white/30 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors">
             Переглянути каталог
           </button>
