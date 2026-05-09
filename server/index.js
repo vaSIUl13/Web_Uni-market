@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 // НАЛАШТУВАННЯ MULTER З ЛІМІТОМ
-// Файл буде триматися в memoryStorage, поки ми не відправимо його у Firebase
+// Файл буде триматися в memoryStorage, поки не відправиться у Firebase
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 2 * 1024 * 1024 } // Ліміт 2 Мегабайти
@@ -58,7 +58,7 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
         await fileUpload.makePublic();
         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-        // 2. Створюємо документ у Firestore
+        // 2. Створюю документ у Firestore
         const newProduct = {
             title,
             price: Number(price),
@@ -66,7 +66,7 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
             category,
             condition,
             imageUrl: imageUrl, // Посилання на завантажене фото
-            sellerId: req.user.uid, // Беремо ID з токена авторизації!
+            sellerId: req.user.uid, // Беру ID з токена авторизації!
             views: 0,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
@@ -82,6 +82,34 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
     } catch (error) {
         console.error("Помилка створення товару:", error);
         res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
+// ---------------------------------------------------------
+// ЕНДПОІНТ: ОТРИМАННЯ ВСІХ ТОВАРІВ (GET /api/products)
+// ---------------------------------------------------------
+app.get('/api/products', async (req, res) => {
+    try {
+        // Беремо категорію з запиту (якщо фронтенд хоче фільтрувати)
+        const { category } = req.query;
+
+        let query = db.collection('products').orderBy('createdAt', 'desc');
+
+        // Якщо передали категорію, фільтруємо по ній
+        if (category) {
+            query = query.where('category', '==', category);
+        }
+
+        const snapshot = await query.get();
+        const products = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        res.status(200).json(products);
+    } catch (error) {
+        console.error("Помилка отримання товарів:", error);
+        res.status(500).json({ message: "Помилка сервера при завантаженні товарів" });
     }
 });
 
