@@ -1,26 +1,24 @@
 // client/src/App.tsx
-import Header from './components/Header';
-import Hero from './components/Hero';
-import StatsBanner from './components/StatsBanner';
-import Categories from './components/Categories';
-import PopularAds from './components/PopularAds';
-import CallToAction from './components/CallToAction';
-import Footer from './components/Footer';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Home from "./pages/Home";
+import CatalogPage from "./pages/CatalogPage";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <Header />
-      <main className="flex-grow">
-        <Hero />
-        <StatsBanner />
-        <Categories />
-        <PopularAds />
-        <CallToAction />
+    <BrowserRouter>
+      <div className="min-h-screen bg-white flex flex-col font-sans">
+        <Header />
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalog" element={<CatalogPage />} />
+          </Routes>
+        </main>
         <Footer />
-      </main>
-
-    </div>
+      </div>
+    </BrowserRouter>
   );
 }
 

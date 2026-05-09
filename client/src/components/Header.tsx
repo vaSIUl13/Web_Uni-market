@@ -1,19 +1,35 @@
 import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault(); // Зупиняємо стандартний різкий стрибок браузера
-
-    const element = document.getElementById(id);
-    if (element) {
-      const y = element.getBoundingClientRect().top + window.scrollY - 80;
-
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-
+    e.preventDefault();
     setIsMobileMenuOpen(false);
+
+    // Якщо ми НЕ на головній сторінці - спочатку переходимо туди
+    if (location.pathname !== "/") {
+      navigate("/");
+      // Даємо React мілісекунду на рендер головної сторінки, потім скролимо
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top: y, behavior: "smooth" });
+        }
+      }, 100);
+    } else {
+      // Якщо вже на головній - просто скролимо
+      const element = document.getElementById(id);
+      if (element) {
+        const y = element.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    }
   };
 
   return (
@@ -43,18 +59,18 @@ const Header = () => {
         </div>
 
         <nav className="hidden lg:flex items-center gap-2">
-          <a
-            href="#"
+          <Link
+            to="/"
             className="bg-[#eff6ff] text-[#3b63f6] px-5 py-2.5 rounded-full text-sm font-semibold transition-colors"
           >
             Головна
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/catalog"
             className="text-gray-600 hover:bg-gray-50 hover:text-[#3b63f6] px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
           >
             Каталог
-          </a>
+          </Link>
           <a
             href="#categories"
             onClick={(e) => handleScroll(e, "categories")}
