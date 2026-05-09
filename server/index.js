@@ -215,37 +215,5 @@ app.delete('/api/products/:id', verifyToken, async (req, res) => {
     }
 });
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// Ініціалізація Gemini (заміни 'YOUR_API_KEY' на свій ключ)
-const genAI = new GoogleGenerativeAI("AIzaSyAY2OPTN_IiL_-2PfFMW0CRh6nWgEAnjek");
-
-// ЕНДПОІНТ: ГЕНЕРАЦІЯ ОПИСУ ЧЕРЕЗ ШІ (Критерій 7)
-app.post('/api/ai/generate-description', async (req, res) => {
-    try {
-        const { title, category } = req.body;
-
-        if (!title) {
-            return res.status(400).json({ message: "Назва товару обов'язкова для генерації!" });
-        }
-
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const prompt = `Ти професійний копірайтер маркетплейсу для студентів UniMarket. 
-        Напиши короткий, привабливий та молодіжний опис для оголошення: "${title}". 
-        Категорія товару: ${category || 'Загальна'}. 
-        Мова: українська. Опис має бути не довшим за 3 речення.`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        res.json({ description: text });
-
-    } catch (error) {
-        console.error("AI Generation Error:", error);
-        res.status(500).json({ message: "ШІ тимчасово приліг відпочити. Спробуйте пізніше." });
-    }
-});
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Бекенд працює на порту ${PORT}`));
