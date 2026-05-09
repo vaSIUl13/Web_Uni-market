@@ -1,34 +1,89 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const { admin, db, bucket } = require('./firebase');
 
 const app = express();
+app.use(cors());
+app.use(express.json());
 
-// Налаштування
-app.use(cors()); // Дозвіл фронтенду робити до нас запити
-app.use(express.json()); // Сервер читає JSON-дані
+// НАЛАШТУВАННЯ MULTER З ЛІМІТОМ
+// Файл буде триматися в memoryStorage, поки ми не відправимо його у Firebase
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 } // Ліміт 2 Мегабайти
+});
 
-// Перший API-ендпоінт (на основі макету з Figma)
-app.post('/api/products', (req, res) => {
-    // Витяг даних, які пришле фронтенд
-    const { title, price, description, category, condition, images } = req.body;
-
-    // Базова перевірка (чи всі поля заповнені)
-    if (!title || !price || !category) {
-        return res.status(400).json({ message: "Назва, ціна та категорія є обов'язковими!" });
+// ---------------------------------------------------------
+// МІДЛВАР ДЛЯ АВТОРИЗАЦІЇ
+// ---------------------------------------------------------
+const verifyToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Немає токена авторизації!" });
     }
 
-    // ТУТ БУДЕ КОД ЗБЕРЕЖЕННЯ В БАЗУ (додам його наступним кроком)
-    console.log("Ура! Прийшли дані від фронтенду:", req.body);
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        req.user = decodedToken; // Записуємо дані юзера (включаючи uid)
+        next(); // Пропускаємо далі
+    } catch (error) {
+        return res.status(403).json({ message: "Недійсний токен!" });
+    }
+};
 
-    // Відповідь фронтенду, що все ок
-    res.status(201).json({
-        message: "Оголошення успішно створено на бекенді!",
-        productInfo: { title, price, condition }
-    });
+// ---------------------------------------------------------
+// ЕНДПОІНТ: СТВОРЕННЯ ТОВАРУ (POST /api/products)
+// Приймає текст і 1 картинку (поле 'image')
+// ---------------------------------------------------------
+app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
+    try {
+        const { title, price, description, category, condition } = req.body;
+        const file = req.file; // Це наша картинка
+
+        if (!title || !price || !file) {
+            return res.status(400).json({ message: "Назва, ціна та фото обов'язкові!" });
+        }
+
+        // 1. Завантажуємо фото у Firebase Storage
+        const fileName = `products/${Date.now()}_${file.originalname}`;
+        const fileUpload = bucket.file(fileName);
+
+        await fileUpload.save(file.buffer, {
+            metadata: { contentType: file.mimetype },
+        });
+
+        // Робимо файл публічним, щоб фронтенд міг його показати
+        await fileUpload.makePublic();
+        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+        // 2. Створюємо документ у Firestore
+        const newProduct = {
+            title,
+            price: Number(price),
+            description,
+            category,
+            condition,
+            imageUrl: imageUrl, // Посилання на завантажене фото
+            sellerId: req.user.uid, // Беремо ID з токена авторизації!
+            views: 0,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        const docRef = await db.collection('products').add(newProduct);
+
+        res.status(201).json({
+            message: "Товар успішно створено!",
+            id: docRef.id,
+            imageUrl: imageUrl
+        });
+
+    } catch (error) {
+        console.error("Помилка створення товару:", error);
+        res.status(500).json({ message: "Помилка сервера" });
+    }
 });
 
-// Запуск сервера
 const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Сервер успішно запущено! Він слухає порт ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Бекенд працює на порту ${PORT}`));

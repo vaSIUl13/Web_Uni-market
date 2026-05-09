@@ -1,13 +1,13 @@
 const admin = require("firebase-admin");
-// Підключаю файл
 const serviceAccount = require("./serviceAccountKey.json");
 
-// Ініціалізація Firebase для сервера
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount),
+    // ВСТАВ СЮДИ storageBucket З ТОГО КОНФІГУ, ЩО ТИ СКИНУВ ВИЩЕ:
+    storageBucket: "https://unimarket-f3c72.firebasestorage.app"
 });
 
-// Доступ до Firestore
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
-module.exports = db;
+module.exports = { admin, db, bucket };
