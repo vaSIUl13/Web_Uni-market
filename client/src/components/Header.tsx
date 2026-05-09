@@ -1,11 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { signInWithGoogle, logout, subscribeToAuthChanges } from "../firebase/authService";
+import type { User } from "firebase/auth";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const [user, setUser] = useState<User | null>(null);
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Підписка на авторизацію
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
@@ -105,24 +117,53 @@ const Header = () => {
               />
             </svg>
           </button>
-          <button className="flex items-center gap-2 border border-[#3b63f6] text-[#3b63f6] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-[#eff6ff] transition-colors">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+          
+          {user ? (
+          /* Блок, який з'явиться ПІСЛЯ входу */
+            <div className="flex items-center gap-3 pr-2">
+              <div className="text-right">
+                <p className="text-xs font-bold text-[#1e293b] leading-tight">
+                  {user.displayName}
+                </p>
+                <button 
+                  onClick={logout} 
+                  className="text-[10px] text-red-500 hover:underline font-medium uppercase tracking-tighter"
+                >
+                  Вийти
+                </button>
+              </div>
+              <img 
+                src={user.photoURL || ""} 
+                alt="user" 
+                referrerPolicy="no-referrer"
+                className="w-9 h-9 rounded-full border border-gray-100 shadow-sm" 
               />
-            </svg>
-            Увійти
-          </button>
+            </div>
+          ) : (
+            /* Твоя оригінальна кнопка, до якої ми просто додали onClick */
+            <button 
+              onClick={signInWithGoogle}
+              className="flex items-center gap-2 border border-[#3b63f6] text-[#3b63f6] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-[#eff6ff] transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                />
+              </svg>
+              Увійти
+            </button>
+          )}
+          
           <button className="flex items-center gap-2 bg-[#3b63f6] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
             <svg
               xmlns="http://www.w3.org/2000/svg"
