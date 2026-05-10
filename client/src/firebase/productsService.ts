@@ -1,299 +1,178 @@
-import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    getDoc,
-    setDoc,
-    doc,
-    query, 
-    where, 
-    orderBy, 
-    limit, 
-    deleteDoc,
-    updateDoc,
-    increment,
-    serverTimestamp 
-} from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
-import { db, storage } from "./config";
-import { uploadProductImage } from "./storageService";
-import type { Product } from "./types";
-import { getAuth } from "firebase/auth"; 
-
-  /**
-   * 1. Створення товару (Завдання 4.1)
-   */
-export const createProduct = async (
-    productData: Omit<Product, "id" | "imageUrl" | "createdAt" | "sellerId" | "sellerName">, 
-    imageFile: File
-): Promise<string> => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-  
-    // Порада: Перевірка на auth прямо тут
-    if (!user) {
-      throw new Error("Користувач не авторизований. Створення товару неможливе.");
-    }
-  
-    try {
-      // 1. Завантажуємо фото
-      const imageUrl = await uploadProductImage(imageFile);
-  
-      // 2. Зберігаємо в Firestore, автоматично додаючи дані автора
-      const docRef = await addDoc(collection(db, "products"), {
-        ...productData,
-        imageUrl,
-        sellerId: user.uid,        // Беремо UID з об'єкта авторизації
-        sellerName: user.displayName || "Анонімний студент",
-        createdAt: serverTimestamp(),
-        views: 0
-      });
-  
-      return docRef.id;
-    } catch (error) {
-      console.error("Помилка створення товару:", error);
-      throw error;
-    }
-};
-  
 /**
- * Отримує список товарів з лімітом (12 штук)
+ * Сервіс для роботи з товарами через бекенд API
+ * Замість прямого доступу до Firestore, всі операції йдуть через Express сервер
+ */
+
+import { 
+  fetchProducts as apiFetchProducts, 
+  fetchProductById as apiFetchProductById,
+  createProduct as apiCreateProduct,
+  deleteProduct as apiDeleteProduct,
+  searchProducts as apiSearchProducts,
+  fetchMyProducts as apiFetchMyProducts,
+  rateProduct as apiRateProduct
+} from "../api/api";
+import type { Product } from "./types";
+
+/**
+ * Створення товару через бекенд API
+ */
+export const createProduct = async (
+  productData: {
+    title: string;
+    price: number;
+    description?: string;
+    category?: any;
+    condition?: any;
+  },
+  imageFile: File
+): Promise<string> => {
+  const formData = new FormData();
+  formData.append("title", productData.title);
+  formData.append("price", String(productData.price));
+  if (productData.description) formData.append("description", productData.description);
+  if (productData.category) formData.append("category", JSON.stringify(productData.category));
+  if (productData.condition) formData.append("condition", JSON.stringify(productData.condition));
+  formData.append("image", imageFile);
+
+  const result = await apiCreateProduct(formData);
+  return result.id;
+};
+
+/**
+ * Отримує список товарів з бекенду
  */
 export const getProducts = async (
-    categoryText?: string, 
-    conditionText?: string,
-    pageSize: number = 12 // Додаємо параметр ліміту
+  categoryText?: string,
+  conditionText?: string,
+  pageSize: number = 12
 ): Promise<Product[]> => {
-    try {
-        // Початковий запит із сортуванням та лімітом
-        let q = query(
-            collection(db, "products"), 
-            orderBy("createdAt", "desc"),
-            limit(pageSize) 
-        );
-    
-        // Фільтр за категорією
-        if (categoryText && categoryText !== "Всі") {
-            q = query(q, where("category.text", "==", categoryText));
-        }
-    
-        // Фільтр за станом
-        if (conditionText && conditionText !== "Всі") {
-            q = query(q, where("conditionBadge.text", "==", conditionText));
-        }
-    
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as Product[];
-    } catch (error) {
-      console.error("Помилка при отриманні товарів:", error);
-      return [];
-    }
-};
-  
-  /**
-   * 3. Отримання одного товару за ID (Для детальної сторінки)
-   */
-export const getProductById = async (id: string): Promise<Product | null> => {
-    try {
-        const docRef = doc(db, "products", id);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as Product;
-        }
-        return null;
-    } catch (error) {
-        console.error("Помилка отримання товару:", error);
-        return null;
-    }
-};
-  
-  /**
-   * 4. Видалення товару та його фото (Повний CRUD)
-   */
-export const deleteProduct = async (id: string, imageUrl: string) => {
-    try {
-        await deleteDoc(doc(db, "products", id));
-        const imageRef = ref(storage, imageUrl);
-        await deleteObject(imageRef);
-    } catch (error) {
-        console.error("Помилка видалення:", error);
-    }
+  try {
+    const products = await apiFetchProducts(categoryText, conditionText, pageSize);
+    return products as Product[];
+  } catch (error) {
+    console.error("Помилка при отриманні товарів:", error);
+    return [];
+  }
 };
 
 /**
- * Отримує товари тільки поточного авторизованого користувача
+ * Отримання одного товару за ID
+ */
+export const getProductById = async (id: string): Promise<Product | null> => {
+  try {
+    const product = await apiFetchProductById(id);
+    return product as Product;
+  } catch (error) {
+    console.error("Помилка отримання товару:", error);
+    return null;
+  }
+};
+
+/**
+ * Видалення товару через бекенд
+ */
+export const deleteProduct = async (id: string, _imageUrl?: string) => {
+  try {
+    await apiDeleteProduct(id);
+  } catch (error) {
+    console.error("Помилка видалення:", error);
+    throw error;
+  }
+};
+
+/**
+ * Отримує товари поточного користувача
  */
 export const getUserProducts = async (): Promise<Product[]> => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-
-    if (!user) return [];
-
-    try {
-        const q = query(
-            collection(db, "products"),
-            where("sellerId", "==", user.uid),
-            orderBy("createdAt", "desc")
-        );
-
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as Product[];
-    } catch (error) {
-        console.error("Помилка отримання товарів користувача:", error);
-        return [];
-    }
+  try {
+    return await apiFetchMyProducts() as Product[];
+  } catch (error) {
+    console.error("Помилка отримання товарів користувача:", error);
+    return [];
+  }
 };
 
 /**
- * Оновлює дані існуючого товару
- */
-export const updateProduct = async (id: string, updateData: Partial<Product>) => {
-    try {
-        const docRef = doc(db, "products", id);
-        await updateDoc(docRef, updateData);
-        console.log("Товар оновлено успішно");
-    } catch (error) {
-        console.error("Помилка оновлення товару:", error);
-        throw error;
-    }
-};
-
-/**
- * Пошук товарів за початком назви
+ * Пошук товарів за назвою
  */
 export const searchProducts = async (searchText: string): Promise<Product[]> => {
-    try {
-        const q = query(
-            collection(db, "products"),
-            where("title", ">=", searchText),
-            where("title", "<=", searchText + "\uf8ff"),
-            limit(10)
-        );
-
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as Product[];
-    } catch (error) {
-        console.error("Помилка пошуку:", error);
-        return [];
-    }
+  try {
+    return await apiSearchProducts(searchText) as Product[];
+  } catch (error) {
+    console.error("Помилка пошуку:", error);
+    return [];
+  }
 };
 
 /**
- * Отримує оголошення конкретного користувача
+ * Alias для getUserProducts
  */
-export const getMyProducts = async (): Promise<Product[]> => {
-    const auth = getAuth();
-    if (!auth.currentUser) return [];
+export const getMyProducts = getUserProducts;
 
-    try {
-        const q = query(
-            collection(db, "products"),
-            where("sellerId", "==", auth.currentUser.uid),
-            orderBy("createdAt", "desc")
-        );
-
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as Product[];
-    } catch (error) {
-        console.error("Помилка отримання моїх товарів:", error);
-        return [];
-    }
-};
-
-/* Лічильник переглядів */
-export const incrementProductViews = async (id: string) => {
-    try {
-        const docRef = doc(db, "products", id);
-        await updateDoc(docRef, {
-            views: increment(1)
-        });
-    } catch (error) {
-        console.error("Помилка лічильника переглядів:", error);
-    }
+/**
+ * Лічильник переглядів — тепер інкрементиться автоматично при GET /api/products/:id
+ * Цю функцію залишаємо як no-op для зворотної сумісності
+ */
+export const incrementProductViews = async (_id: string) => {
+  // Перегляди рахуються автоматично на бекенді при getProductById
 };
 
 /**
- * Робота з "Обраним" (Favorites)
+ * Оцінка товару
  */
+export const rateProduct = async (id: string, rating: number): Promise<any> => {
+  return await apiRateProduct(id, rating);
+};
 
-/**
- * Додає товар у список обраного для конкретного користувача.
- * Ми використовуємо спеціальний ID документа (userId_productId), 
- * щоб уникнути дублікатів.
- */
+// ============================
+// Обране (Favorites) — залишаємо через клієнтський Firebase SDK,
+// бо немає ендпоінтів на бекенді для цього
+// ============================
+import { 
+  collection, getDocs, query, where, 
+  doc, setDoc, deleteDoc, serverTimestamp 
+} from "firebase/firestore";
+import { db } from "./config";
+import { getAuth } from "firebase/auth";
+
 export const addToFavorites = async (productId: string) => {
-    const auth = getAuth();
-    const user = auth.currentUser;
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Авторизуйтесь, щоб додати в обране");
 
-    if (!user) throw new Error("Авторизуйтесь, щоб додати в обране");
-
-    try {
-        // Створюємо унікальний ID для документа: UID_PID
-        const favoriteId = `${user.uid}_${productId}`;
-        const favRef = doc(db, "favorites", favoriteId);
-
-        await setDoc(favRef, {
-            userId: user.uid,
-            productId: productId,
-            addedAt: serverTimestamp()
-        });
-        console.log("Товар додано в обране");
-    } catch (error) {
-        console.error("Помилка додавання в обране:", error);
-        throw error;
-    }
+  const favoriteId = `${user.uid}_${productId}`;
+  const favRef = doc(db, "favorites", favoriteId);
+  await setDoc(favRef, {
+    userId: user.uid,
+    productId,
+    addedAt: serverTimestamp()
+  });
 };
 
-/**
- * Видаляє товар зі списку обраного
- */
 export const removeFromFavorites = async (productId: string) => {
-    const auth = getAuth();
-    const user = auth.currentUser;
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) return;
 
-    if (!user) return;
-
-    try {
-        const favoriteId = `${user.uid}_${productId}`;
-        await deleteDoc(doc(db, "favorites", favoriteId));
-        console.log("Товар видалено з обраного");
-    } catch (error) {
-        console.error("Помилка видалення з обраного:", error);
-    }
+  const favoriteId = `${user.uid}_${productId}`;
+  await deleteDoc(doc(db, "favorites", favoriteId));
 };
 
-/**
- * Отримує список ID товарів, які користувач додав у обране.
- */
 export const getUserFavoriteIds = async (): Promise<string[]> => {
-    const auth = getAuth();
-    const user = auth.currentUser;
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) return [];
 
-    if (!user) return [];
-
-    try {
-        const q = query(
-            collection(db, "favorites"),
-            where("userId", "==", user.uid)
-        );
-
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => doc.data().productId);
-    } catch (error) {
-        console.error("Помилка отримання ID обраних товарів:", error);
-        return [];
-    }
+  try {
+    const q = query(
+      collection(db, "favorites"),
+      where("userId", "==", user.uid)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.data().productId);
+  } catch (error) {
+    console.error("Помилка отримання ID обраних товарів:", error);
+    return [];
+  }
 };

@@ -1,9 +1,31 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import StatItem from "./ui/StatItem";
 import FloatingBadge from "./ui/FloatingBadge";
 import WidgetCard from "./ui/WidgetCard";
 
 const Hero = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/catalog?search=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate("/catalog");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const handleAddProduct = () => {
+    navigate("/add-product");
+  };
+
   return (
     <section className="relative w-full bg-[#f8fafc] overflow-hidden pt-12 pb-20">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-100/50 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none"></div>
@@ -43,10 +65,16 @@ const Hero = () => {
             </div>
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Пошук товарів, конспектів, послуг..."
               className="w-full px-3 py-3 text-sm focus:outline-none bg-transparent"
             />
-            <button className="bg-[#3b63f6] text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={handleSearch}
+              className="bg-[#3b63f6] text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+            >
               Шукати
             </button>
           </div>
@@ -112,7 +140,10 @@ const Hero = () => {
           </div>
 
           <div className="flex items-center gap-4 pt-2">
-            <button className="bg-[#3b63f6] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-md">
+            <button 
+              onClick={() => navigate("/catalog")}
+              className="bg-[#3b63f6] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-md"
+            >
               Переглянути каталог
               <svg
                 width="16"
@@ -129,7 +160,10 @@ const Hero = () => {
                 />
               </svg>
             </button>
-            <button className="bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={handleAddProduct}
+              className="bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
               Додати оголошення
             </button>
           </div>

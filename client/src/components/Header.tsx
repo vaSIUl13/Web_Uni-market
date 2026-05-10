@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { signInWithGoogle, logout, subscribeToAuthChanges } from "../firebase/authService";
+import { logout, subscribeToAuthChanges } from "../firebase/authService";
 import type { User } from "firebase/auth";
+import AuthModal from "./AuthModal";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
 
@@ -44,8 +46,17 @@ const Header = () => {
     }
   };
 
+  const handleAddProduct = () => {
+    if (user) {
+      navigate('/add-product');
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  };
+
   return (
-    <header className="w-full bg-white border-b border-gray-100 sticky top-0 z-50">
+    <>
+      <header className="w-full bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-[1280px] mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3 cursor-pointer z-50">
           <div className="w-10 h-10 bg-[#3b63f6] rounded-xl flex items-center justify-center text-white shadow-sm">
@@ -142,7 +153,7 @@ const Header = () => {
           ) : (
             /* Твоя оригінальна кнопка, до якої ми просто додали onClick */
             <button 
-              onClick={signInWithGoogle}
+              onClick={() => setIsAuthModalOpen(true)}
               className="flex items-center gap-2 border border-[#3b63f6] text-[#3b63f6] px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-[#eff6ff] transition-colors"
             >
               <svg
@@ -164,7 +175,11 @@ const Header = () => {
             </button>
           )}
           
-          <button className="flex items-center gap-2 bg-[#3b63f6] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+          
+          <button 
+            onClick={handleAddProduct}
+            className="flex items-center gap-2 bg-[#3b63f6] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="18"
@@ -251,25 +266,33 @@ const Header = () => {
         </nav>
 
         <div className="mt-auto mb-10 flex flex-col gap-3">
-          <button className="w-full flex justify-center items-center gap-2 border border-[#3b63f6] text-[#3b63f6] py-3.5 rounded-2xl font-semibold">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
+          {!user && (
+            <button 
+              onClick={() => { setIsMobileMenuOpen(false); setIsAuthModalOpen(true); }}
+              className="w-full flex justify-center items-center gap-2 border border-[#3b63f6] text-[#3b63f6] py-3.5 rounded-2xl font-semibold"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-              />
-            </svg>
-            Увійти
-          </button>
-          <button className="w-full flex justify-center items-center gap-2 bg-[#3b63f6] text-white py-3.5 rounded-2xl font-semibold">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                />
+              </svg>
+              Увійти
+            </button>
+          )}
+          <button 
+            onClick={() => { setIsMobileMenuOpen(false); handleAddProduct(); }}
+            className="w-full flex justify-center items-center gap-2 bg-[#3b63f6] text-white py-3.5 rounded-2xl font-semibold"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -290,6 +313,8 @@ const Header = () => {
         </div>
       </div>
     </header>
+    <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+    </>
   );
 };
 
