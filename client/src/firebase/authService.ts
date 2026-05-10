@@ -5,7 +5,7 @@ import {
     signOut, 
     onAuthStateChanged,
     type User 
-  } from "firebase/auth";
+  } from 'firebase/auth';
 import app from "./config";
   
 const auth = getAuth(app);
