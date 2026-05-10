@@ -123,11 +123,19 @@ app.get('/api/products', async (req, res) => {
         const { category, condition, limit: limitParam } = req.query;
         const pageSize = parseInt(limitParam) || 12;
 
-        let query = db.collection('products').orderBy('createdAt', 'desc').limit(pageSize);
+        // Порядок: спочатку WHERE, потім ORDERBY, потім LIMIT
+        let query = db.collection('products');
 
+        // Додаємо фільтр за категорією ПЕРЕД orderBy (якщо потрібен)
         if (category && category !== 'Всі') {
             query = query.where('category.text', '==', category);
         }
+
+        // Тепер додаємо сортування
+        query = query.orderBy('createdAt', 'desc');
+
+        // І нарешті ліміт
+        query = query.limit(pageSize);
 
         const snapshot = await query.get();
 
