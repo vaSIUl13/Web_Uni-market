@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { logout, subscribeToAuthChanges } from "../firebase/authService";
 import type { User } from "firebase/auth";
 import AuthModal from "./AuthModal";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -12,6 +14,8 @@ const Header = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { totalItems } = useCart();
+  const { favoriteIds } = useFavorites();
 
   // Підписка на авторизацію
   useEffect(() => {
@@ -58,7 +62,7 @@ const Header = () => {
     <>
       <header className="w-full bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-[1280px] mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer z-50">
+        <Link to="/" className="flex items-center gap-3 cursor-pointer z-50">
           <div className="w-10 h-10 bg-[#3b63f6] rounded-xl flex items-center justify-center text-white shadow-sm">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -79,18 +83,26 @@ const Header = () => {
           <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight">
             <span className="text-[#3b63f6]">Uni</span>Market
           </h1>
-        </div>
+        </Link>
 
         <nav className="hidden lg:flex items-center gap-2">
           <Link
             to="/"
-            className="bg-[#eff6ff] text-[#3b63f6] px-5 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${
+              location.pathname === "/"
+                ? "bg-[#eff6ff] text-[#3b63f6]"
+                : "text-gray-600 hover:bg-gray-50 hover:text-[#3b63f6]"
+            }`}
           >
             Головна
           </Link>
           <Link
             to="/catalog"
-            className="text-gray-600 hover:bg-gray-50 hover:text-[#3b63f6] px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${
+              location.pathname === "/catalog"
+                ? "bg-[#eff6ff] text-[#3b63f6]"
+                : "text-gray-600 hover:bg-gray-50 hover:text-[#3b63f6]"
+            }`}
           >
             Каталог
           </Link>
@@ -111,7 +123,26 @@ const Header = () => {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
-          <button className="text-gray-500 hover:text-[#3b63f6] p-2 transition-colors mr-2">
+          <Link to="/favorites" className="text-gray-500 hover:text-red-500 p-2 transition-colors relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            {favoriteIds.length > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {favoriteIds.length}
+              </span>
+            )}
+          </Link>
+          
+          <Link to="/cart" className="text-gray-500 hover:text-[#3b63f6] p-2 transition-colors mr-2 relative">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -127,11 +158,19 @@ const Header = () => {
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-          </button>
+            {totalItems > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-[#3b63f6] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </Link>
           
           {user ? (
           /* Блок, який з'явиться ПІСЛЯ входу */
-            <div className="flex items-center gap-3 pr-2">
+            <div className="flex items-center gap-4 pr-2">
+              <Link to="/orders" className="text-sm font-semibold text-gray-700 hover:text-[#3b63f6] transition-colors">
+                Мої замовлення
+              </Link>
               <div className="text-right">
                 <p className="text-xs font-bold text-[#1e293b] leading-tight">
                   {user.displayName}
@@ -243,12 +282,28 @@ const Header = () => {
         className={`lg:hidden fixed inset-0 bg-white z-40 flex flex-col pt-24 px-6 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <nav className="flex flex-col gap-4 text-center text-lg font-medium">
-          <a href="#" className="bg-[#eff6ff] text-[#3b63f6] py-3 rounded-2xl">
+          <Link 
+            to="/" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`py-3 rounded-2xl ${
+              location.pathname === "/" 
+                ? "bg-[#eff6ff] text-[#3b63f6]" 
+                : "text-gray-700 hover:text-[#3b63f6]"
+            }`}
+          >
             Головна
-          </a>
-          <a href="#" className="py-3 text-gray-700 hover:text-[#3b63f6]">
+          </Link>
+          <Link 
+            to="/catalog" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`py-3 rounded-2xl ${
+              location.pathname === "/catalog" 
+                ? "bg-[#eff6ff] text-[#3b63f6]" 
+                : "text-gray-700 hover:text-[#3b63f6]"
+            }`}
+          >
             Каталог
-          </a>
+          </Link>
           <a
             href="#categories"
             onClick={(e) => handleScroll(e, "categories")}
@@ -263,6 +318,44 @@ const Header = () => {
           >
             Про проєкт
           </a>
+          
+          <div className="w-full h-px bg-gray-100 my-2"></div>
+          
+          <Link 
+            to="/cart" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center justify-center gap-2 py-3 text-gray-700 hover:text-[#3b63f6] cursor-pointer"
+          >
+            <span>Кошик</span>
+            {totalItems > 0 && (
+              <span className="w-5 h-5 bg-[#3b63f6] text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </Link>
+          
+          <Link 
+            to="/favorites" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center justify-center gap-2 py-3 text-gray-700 hover:text-red-500 cursor-pointer"
+          >
+            <span>Обрані</span>
+            {favoriteIds.length > 0 && (
+              <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {favoriteIds.length}
+              </span>
+            )}
+          </Link>
+
+          {user && (
+            <Link 
+              to="/orders" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-3 text-gray-700 hover:text-[#3b63f6] cursor-pointer"
+            >
+              Мої замовлення
+            </Link>
+          )}
         </nav>
 
         <div className="mt-auto mb-10 flex flex-col gap-3">

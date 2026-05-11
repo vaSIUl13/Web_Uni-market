@@ -335,5 +335,117 @@ app.get('/api/my-products', verifyToken, async (req, res) => {
     }
 });
 
+// ---------------------------------------------------------
+// ЕНДПОІНТ: СТВОРЕННЯ ЗАМОВЛЕННЯ (POST /api/orders)
+// ---------------------------------------------------------
+app.post('/api/orders', verifyToken, async (req, res) => {
+    try {
+        const { items, totalAmount, deliveryInfo, paymentInfo } = req.body;
+        const userId = req.user.uid;
+
+        if (!items || !items.length) {
+            return res.status(400).json({ message: "Кошик порожній" });
+        }
+
+        const newOrder = {
+            userId,
+            items,
+            totalAmount,
+            deliveryInfo,
+            paymentInfo: {
+                ...paymentInfo,
+                cardNumber: paymentInfo.cardNumber ? `**** **** **** ${paymentInfo.cardNumber.slice(-4)}` : null,
+            },
+            status: "Очікує відправки",
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        const docRef = await db.collection('orders').add(newOrder);
+
+        res.status(201).json({ message: "Замовлення успішно створено!", orderId: docRef.id });
+    } catch (error) {
+        console.error("Помилка створення замовлення:", error);
+        res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
+// ---------------------------------------------------------
+// ЕНДПОІНТ: ОТРИМАННЯ ЗАМОВЛЕНЬ КОРИСТУВАЧА (GET /api/orders)
+// ---------------------------------------------------------
+app.get('/api/orders', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+
+        const snapshot = await db.collection('orders')
+            .where('userId', '==', userId)
+            .get();
+
+        const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Сортуємо в пам'яті, щоб уникнути помилки відсутності індексу у Firestore
+        orders.sort((a, b) => {
+            const timeA = a.createdAt?._seconds || 0;
+            const timeB = b.createdAt?._seconds || 0;
+            return timeB - timeA;
+        });
+
+        res.status(200).json(orders);
+    } catch (error) {
+        console.error("Помилка отримання замовлень:", error);
+        res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
+// ---------------------------------------------------------
+// ЕНДПОІНТ: ДОДАВАННЯ В ОБРАНЕ (POST /api/favorites/:productId)
+// ---------------------------------------------------------
+app.post('/api/favorites/:productId', verifyToken, async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const userId = req.user.uid;
+        const favoriteId = `${userId}_${productId}`;
+        await db.collection('favorites').doc(favoriteId).set({
+            userId,
+            productId,
+            addedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.status(200).json({ message: "Додано в обране" });
+    } catch (error) {
+        res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
+// ---------------------------------------------------------
+// ЕНДПОІНТ: ВИДАЛЕННЯ З ОБРАНОГО (DELETE /api/favorites/:productId)
+// ---------------------------------------------------------
+app.delete('/api/favorites/:productId', verifyToken, async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const userId = req.user.uid;
+        const favoriteId = `${userId}_${productId}`;
+        await db.collection('favorites').doc(favoriteId).delete();
+        res.status(200).json({ message: "Видалено з обраного" });
+    } catch (error) {
+        res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
+// ---------------------------------------------------------
+// ЕНДПОІНТ: ОТРИМАННЯ ОБРАНОГО КОРИСТУВАЧА (GET /api/favorites)
+// ---------------------------------------------------------
+app.get('/api/favorites', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const snapshot = await db.collection('favorites').where('userId', '==', userId).get();
+        const ids = snapshot.docs.map(doc => doc.data().productId);
+        res.status(200).json(ids);
+    } catch (error) {
+        res.status(500).json({ message: "Помилка сервера" });
+    }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => console.log(`✅ Бекенд працює на порту ${PORT}`));

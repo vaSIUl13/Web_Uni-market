@@ -123,3 +123,71 @@ export const fetchMyProducts = async (): Promise<any[]> => {
     },
   });
 };
+
+// ============================
+// ЗАМОВЛЕННЯ (Orders)
+// ============================
+
+export const createOrder = async (orderData: any): Promise<any> => {
+  const token = await getAuthToken();
+  if (!token) throw new Error("Потрібна авторизація для оформлення замовлення!");
+
+  return apiFetch(`${API_BASE}/orders`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(orderData),
+  });
+};
+
+export const fetchMyOrders = async (): Promise<any[]> => {
+  const token = await getAuthToken();
+  if (!token) throw new Error("Потрібна авторизація!");
+
+  return apiFetch(`${API_BASE}/orders`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+// ============================
+// ОБРАНЕ (Favorites)
+// ============================
+
+export const fetchFavorites = async (): Promise<string[]> => {
+  const token = await getAuthToken();
+  if (!token) return [];
+
+  return apiFetch(`${API_BASE}/favorites`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const addFavorite = async (productId: string): Promise<any> => {
+  const token = await getAuthToken();
+  if (!token) throw new Error("Потрібна авторизація");
+
+  return apiFetch(`${API_BASE}/favorites/${productId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const removeFavorite = async (productId: string): Promise<any> => {
+  const token = await getAuthToken();
+  if (!token) throw new Error("Потрібна авторизація");
+
+  return apiFetch(`${API_BASE}/favorites/${productId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};

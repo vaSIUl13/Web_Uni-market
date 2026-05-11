@@ -1,5 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
+import { useFavorites } from "../../context/FavoritesContext";
 
 interface ProductCardProps {
   id?: string;
@@ -51,16 +53,41 @@ const ProductCard = ({
   };
 
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
 
-  const handleClick = () => {
+  const handleCardClick = () => {
     if (id) {
       navigate(`/product/${id}`);
     }
   };
 
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (id) {
+      toggleFavorite(id);
+    }
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (id) {
+      // Reconstruct product object for the cart
+      const product = {
+        id,
+        imageUrl,
+        title,
+        price,
+        category,
+        sellerName: displaySeller
+      };
+      addToCart(product as any);
+    }
+  };
+
   return (
     <div 
-      onClick={handleClick}
+      onClick={handleCardClick}
       className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group cursor-pointer flex flex-col h-full"
     >
       <div className="relative h-56 w-full overflow-hidden">
@@ -91,12 +118,15 @@ const ProductCard = ({
           </div>
         )}
 
-        <button className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm">
+        <button 
+          onClick={handleFavoriteClick}
+          className={`absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm ${id && isFavorite(id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500 hover:bg-white'}`}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="18"
             height="18"
-            fill="none"
+            fill={id && isFavorite(id) ? "currentColor" : "none"}
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth="2"
@@ -182,6 +212,16 @@ const ProductCard = ({
               </span>
             )}
           </div>
+          
+          <button 
+            onClick={handleAddToCart}
+            className="mt-4 w-full bg-[#eff6ff] hover:bg-[#3b63f6] text-[#3b63f6] hover:text-white font-semibold py-2 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            В кошик
+          </button>
         </div>
       </div>
     </div>

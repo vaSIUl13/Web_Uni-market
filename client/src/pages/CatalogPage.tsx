@@ -15,6 +15,7 @@ const CatalogPage = () => {
   const [activePrice, setActivePrice] = useState("Будь-яка");
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
   const [searchInput, setSearchInput] = useState(urlSearchQuery);
+  const [sortBy, setSortBy] = useState("Новіші");
 
   const categories = ["Всі", "Книги", "Конспекти", "Гаджети", "Послуги"];
 
@@ -44,6 +45,10 @@ const CatalogPage = () => {
       setSearchInput(urlSearchQuery);
     }
   }, [urlSearchQuery]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     loadProducts();
@@ -80,6 +85,21 @@ const CatalogPage = () => {
     if (activePrice === "500–2000 грн") return p.price > 500 && p.price <= 2000;
     if (activePrice === "Від 2000 грн") return p.price > 2000;
     return true;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortBy === "Дорожчі") return (b.price || 0) - (a.price || 0);
+    if (sortBy === "Дешевші") return (a.price || 0) - (b.price || 0);
+    
+    // Fallback if createdAt is missing, we just treat it as 0
+    const timeA = a.createdAt?._seconds || a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?._seconds || b.createdAt?.seconds || 0;
+    
+    if (sortBy === "Старіші") {
+       return timeA - timeB;
+    }
+    // "Новіші" (default)
+    return timeB - timeA;
   });
 
   return (
@@ -168,22 +188,22 @@ const CatalogPage = () => {
               ))}
             </div>
 
-            <div className="flex-shrink-0 bg-white border border-gray-200 rounded-xl px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
-              <span className="text-sm font-medium text-gray-700">Новіші</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div className="flex-shrink-0 bg-white border border-gray-200 rounded-xl px-2 flex items-center gap-1 hover:bg-gray-50 transition-colors">
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="text-sm font-medium text-gray-700 bg-transparent outline-none cursor-pointer py-2 pl-2 pr-6 appearance-none"
+                style={{ 
+                  backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 9l-7 7-7-7\"/></svg>')", 
+                  backgroundRepeat: "no-repeat", 
+                  backgroundPosition: "right 4px center" 
+                }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+                <option value="Новіші">Новіші</option>
+                <option value="Старіші">Старіші</option>
+                <option value="Дорожчі">Дорожчі</option>
+                <option value="Дешевші">Дешевші</option>
+              </select>
             </div>
           </div>
 
@@ -213,9 +233,9 @@ const CatalogPage = () => {
           )}
 
           {/* Products grid */}
-          {!loading && filteredProducts.length > 0 && (
+          {!loading && sortedProducts.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
+              {sortedProducts.map((product) => (
                 <div key={product.id}>
                   <ProductCard
                     id={product.id}
