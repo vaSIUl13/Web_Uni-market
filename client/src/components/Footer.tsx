@@ -1,23 +1,24 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const FooterLinkGroup = ({
   title,
   links,
 }: {
   title: string;
-  links: string[];
+  links: { name: string; url: string }[];
 }) => (
   <div>
     <h4 className="text-white font-bold mb-6">{title}</h4>
     <ul className="space-y-4">
       {links.map((link, index) => (
         <li key={index}>
-          <a
-            href="#"
+          <Link
+            to={link.url}
             className="text-gray-400 hover:text-white transition-colors text-sm"
           >
-            {link}
-          </a>
+            {link.name}
+          </Link>
         </li>
       ))}
     </ul>
@@ -121,20 +122,30 @@ const Footer = () => {
 
           <FooterLinkGroup
             title="Платформа"
-            links={["Каталог", "Категорії", "Популярні", "Нові оголошення"]}
+            links={[
+              { name: "Каталог", url: "/catalog" },
+              { name: "Категорії", url: "/#categories" },
+              { name: "Популярні", url: "/#popular" },
+              { name: "Нові оголошення", url: "/catalog" }
+            ]}
           />
 
           <FooterLinkGroup
             title="Про проєкт"
-            links={["Про нас", "Як це працює", "Безпека", "Правила"]}
+            links={[
+              { name: "Про нас", url: "/#about" },
+              { name: "Як це працює", url: "/#how-it-works" },
+              { name: "Безпека", url: "/#security" },
+              { name: "Правила", url: "/#rules" }
+            ]}
           />
 
           <FooterLinkGroup
             title="Підтримка"
             links={[
-              "Центр допомоги",
-              "Зворотній зв'язок",
-              "Повідомити про проблему",
+              { name: "Центр допомоги", url: "/#help" },
+              { name: "Зворотній зв'язок", url: "/#feedback" },
+              { name: "Повідомити про проблему", url: "/#report" },
             ]}
           />
         </div>

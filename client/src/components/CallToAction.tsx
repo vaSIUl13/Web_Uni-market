@@ -1,6 +1,8 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const CallToAction = () => {
+  const navigate = useNavigate();
   return (
     <section className="relative w-full bg-[#3b63f6] overflow-hidden py-20">
       <div
@@ -22,11 +24,17 @@ const CallToAction = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <button className="w-full sm:w-auto bg-white text-[#3b63f6] px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors shadow-lg">
-            Зареєструватись безкоштовно
+          <button 
+            onClick={() => navigate('/add-product')}
+            className="w-full sm:w-auto bg-white text-[#3b63f6] px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors shadow-lg"
+          >
+            Створити оголошення
           </button>
 
-          <button className="w-full sm:w-auto bg-transparent border border-white/30 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors">
+          <button 
+            onClick={() => navigate('/catalog')}
+            className="w-full sm:w-auto bg-transparent border border-white/30 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors"
+          >
             Переглянути каталог
           </button>
         </div>

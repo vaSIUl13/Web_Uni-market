@@ -1,0 +1,283 @@
+# AGENTS.md — Путівник для AI кодування в Uni-Market
+
+Швидкий гід архітектури, конвенцій та критичних точок для автоматизованих агентів та розробників.
+
+## 📐 Архітектура на високому рівні
+
+```
+Uni-Market — двовекторний маркетплейс:
+┌──────────────────────────────────┐
+│ React + TypeScript + Vite (5173) │  client/
+│ ├─ Firebase Web SDK (config.ts)  │
+│ ├─ API обгортка (api/api.ts)     │  ← Всі запити йдуть через /api
+│ └─ Pages + Components             │
+└────────┬─────────────────────────┘
+         │ HTTP (Proxy на :3001)
+         ▼
+┌──────────────────────────────────┐
+│ Express + Node.js (3001)          │  server/
+│ ├─ Firestore (crud, query)        │
+│ ├─ Firebase Storage (images)      │
+│ └─ Firebase Auth (verify tokens)  │
+└────────┬─────────────────────────┘
+         │ Firebase Admin SDK
+         ▼
+┌──────────────────────────────────┐
+│ Firebase Project (unimarket-f3c72)│
+│ ├─ Firestore (products, etc)      │
+│ ├─ Storage (product images)       │
+│ └─ Auth (user management)         │
+└──────────────────────────────────┘
+```
+
+**Ключова деталь:** Фронтенд НЕ касається Firestore напрямки. Усе йде через Express API на :3001.
+
+## 🗂 Структура проекту
+
+```
+Web_Uni-market/
+├── AGENTS.md (цей файл)
+├── package.json (root, містить multer)
+│
+├── client/
+│   ├── src/
+│   │   ├── main.tsx (точка входу)
+│   │   ├── App.tsx (маршрути: /, /catalog, /add-product, /product/:id)
+│   │   ├── api/
+│   │   │   └── api.ts (клієнт для /api/products, /api/my-products)
+│   │   ├── firebase/
+│   │   │   ├── config.ts (Firebase init)
+│   │   │   ├── authService.ts (signUp, signIn, signOut)
+│   │   │   ├── productsService.ts (getProducts, createProduct, deleteProduct)
+│   │   │   ├── storageService.ts (устарело — зараз all через API)
+│   │   │   └── types.ts (Product, Category, ConditionBadge інтерфейси)
+│   │   ├── components/ (Header, Footer, Hero, CatalogSidebar, ProductCard, etc)
+│   │   └── pages/ (Home, CatalogPage, AddProductPage, ProductDetailPage)
+│   ├── vite.config.ts (HMR, proxy: /api → :3001)
+│   ├── tsconfig.json
+│   └── package.json
+│
+└── server/
+    ├── index.js (Express, CORS, multer, всі API endpoints)
+    ├── firebase.js (admin.initializeApp, db, bucket exports)
+    ├── serviceAccountKey.json (НЕ коммітьте! Секрет Firebase Admin)
+    ├── package.json
+    └── test.http (приклади curl/REST викликів)
+```
+
+## 🔌 API Endpoints (Express на :3001)
+
+### Читати товари
+- **GET /api/products** — Список товарів (з фільтрами)
+  - Query: `?category=Гаджети&condition=Новий&limit=12`
+  - Відповідь: `[{id, title, price, imageUrl, category, sellerId, sellerName, views, createdAt}, ...]`
+  - **Деталь:** Спочатку `.where('category.text')`, потім `.orderBy('createdAt', 'desc')`, потім `.limit()`
+  - Condition фільтруємо на стороні (сервер), бо Firestore не підтримує два inequality фільтри
+
+- **GET /api/products/:id** — Один товар (increment views)
+  - Відповідь: `{id, title, price, imageUrl, ...}`
+  - Сторонній ефект: `views += 1`
+
+- **GET /api/products/search?q=iphone** — Текстовий пошук
+  - Використовує `.where('title', '>=', q).where('title', '<=', q + '\uf8ff')`
+
+### Створювати товари
+- **POST /api/products** (авторизація: `Authorization: Bearer {idToken}`)
+  - Content-Type: `multipart/form-data`
+  - Body: `title, price, description, category (JSON), condition (JSON), image (File)`
+  - Валідація:
+    - `title` — не пусто, рядок
+    - `price` — число > 0
+    - `image` — обов'язковий, ліміт 2 МБ
+  - Процес:
+    1. Завантажуємо фото у Storage: `/products/{Date.now()}_{originalName}`
+    2. makePublic() → https URL
+    3. Створюємо документ у Firestore з sellerId=req.user.uid, createdAt=serverTimestamp
+  - Відповідь: `{id, imageUrl}`
+
+### Видаляти товари
+- **DELETE /api/products/:id** (авторизація)
+  - Перевірка: `productData.sellerId === req.user.uid` (інакше 403 Forbidden)
+  - Видаляємо: фото зі Storage + документ із Firestore
+
+### Моє продукти
+- **GET /api/my-products** (авторизація)
+  - Фільтр: `.where('sellerId', '==', userId).orderBy('createdAt', 'desc')`
+  - Відповідь: масив товарів поточного користувача
+
+### Рейтингування
+- **POST /api/products/:id/rate** (авторизація)
+  - Body: `{rating: 1-5}`
+  - Логіка: додаємо рейтинг у `ratings[userId]`, рахуємо середнє
+  - Оновлюємо: `{ratings: {...}, rating: avg, reviewsCount: count}`
+
+## 🔐 Авторизація (verifyToken middleware)
+
+Кожен захищений ендпоінт очікує:
+```javascript
+Authorization: Bearer {idToken}
+```
+
+Сервер:
+1. Витягує `idToken` з заголовка
+2. Викликає `admin.auth().verifyIdToken(idToken)`
+3. Декодований токен → `req.user` (містить `uid`, `email`, `name`)
+4. Якщо невалідний → 403 Forbidden
+
+**На клієнті:** `fetchWithAuth` в `api/api.ts` автоматично додає токен:
+```typescript
+const token = await getAuth().currentUser?.getIdToken();
+```
+
+## 📦 Firestore Schema
+
+### Collection: `products`
+```javascript
+{
+  id: "docId",                    // Auto-generated by add()
+  title: "iPhone 15",
+  price: 500,                     // Число, не рядок
+  description: "...",
+  category: {text: "Гаджети", textClass: "...", bgClass: "..."},
+  condition: {text: "Новий", icon: "✨", ...},
+  imageUrl: "https://storage.googleapis.com/...",
+  sellerId: "uid123",             // Firebase Auth UID
+  sellerName: "Іван Петров",
+  views: 42,
+  createdAt: Timestamp,           // serverTimestamp()
+  ratings: {"uid1": 5, "uid2": 4},  // Рейтинги від користувачів
+  rating: 4.5,                    // Середній рейтинг
+  reviewsCount: 2
+}
+```
+
+**Індекси для Firestore:**
+- ❗ **ВАЖЛИВО:** Якщо використовувати `.where('category.text').orderBy('createdAt')`, потрібен складений індекс!
+  - Firestore автоматично запропонує створити його при першому запиті
+  - Інакше — 500 помилка
+
+## 🚀 Запуск локально
+
+### Фронтенд
+```bash
+cd client
+npm install
+npm run dev        # Vite на :5173, proxy /api → :3001
+```
+
+### Сервер
+```bash
+cd server
+npm install
+node index.js      # Запускається на :3001
+```
+
+### Проблеми
+- **502 Bad Gateway:** Переконайтеся, що сервер запущений на :3001 і `vite.config.ts` проксує на правильний порт
+- **500 при GET /api/products?category=X:** Можливо, відсутній індекс Firestore для `category.text + createdAt`
+  - Рішення: перейти на Firebase Console → Firestore → Indexes → створити індекс
+  - Або скасувати фільтр і робити його на клієнті (як зараз для condition)
+
+## 🔧 Конвенції та патерни
+
+### 1. Імена файлів зображень
+```javascript
+const fileName = `products/${Date.now()}_${file.originalname}`;
+```
+Це гарантує унікальність та легко видаляти: розбити по `{Date.now()}`.
+
+### 2. Моделювання категорій/умови
+```javascript
+// На фронтенді
+const category = {text: "Гаджети", textClass: "text-blue-600", bgClass: "bg-blue-100"};
+formData.append("category", JSON.stringify(category));
+
+// На серверу парсимо
+let parsedCategory = category;
+try {
+  if (typeof category === 'string') parsedCategory = JSON.parse(category);
+} catch (e) {}
+```
+
+### 3. Ошибки повинні повертати статус + message
+```javascript
+res.status(400).json({message: "Ціна повинна бути > 0"});
+```
+Фронтенд очікує цієї структури в `api/api.ts`:
+```typescript
+const errorData = await response.json().catch(() => ({message: "..."}));
+throw new Error(errorData.message);
+```
+
+## 🧪 Тестування API
+
+### Curl
+```bash
+# Отримати товари
+curl http://localhost:3001/api/products?limit=5
+
+# Отримати токен з браузера console
+await getAuth().currentUser.getIdToken()
+
+# Видалити товар
+curl -X DELETE http://localhost:3001/api/products/PRODUCT_ID \
+  -H "Authorization: Bearer TOKEN"
+```
+
+## ⚠️ Поширені помилки та розв'язки
+
+| Проблема | Причина | Рішення |
+|----------|---------|--------|
+| 500 при GET /api/products?category=X | Відсутній Firestore індекс | Створити індекс у Console або скасувати категорію фільтр |
+| 403 при DELETE | sellerId ≠ req.user.uid | Перевірити, що користувач — власник |
+| 502 Bad Gateway | Сервер не на :3001 або проксі невірний | Запустити сервер, перевірити vite.config.ts |
+| FormData не передає | multer не налаштований | Переконатися, що використовується multipart/form-data |
+| serviceAccountKey.json не знайдено | Файл відсутній | Завантажити з Firebase Console → Project Settings |
+
+## 📝 Типова робота агента
+
+1. **Пошук даних:**
+   - Клієнт запитує: `fetchProducts(category, condition, limit)`
+   - Фронтенд: `api/api.ts` → `GET /api/products?category=...&limit=...`
+   - Сервер: `server/index.js` рядок 122-156 — обробляє запит
+
+2. **Створення товару:**
+   - Фронтенд: `client/src/pages/AddProductPage.tsx` → форма
+   - Клієнт: `api/api.ts` → `POST /api/products` з FormData
+   - Сервер: `server/index.js` рядок 50-107 — валідує, завантажує фото, створює документ
+
+3. **Видалення товару:**
+   - Фронтенд: `ProductCard` кнопка "Видалити"
+   - Клієнт: `deleteProduct(id)` з авторизацією
+   - Сервер: `server/index.js` рядок 277-309 — перевіряє власника, видаляє
+
+## 📚 Ключові файли для внесення змін
+
+- **API контракти:** `server/index.js` (рядки 1-339)
+- **Клієнтська логіка запитів:** `client/src/api/api.ts` (рядки 1-126)
+- **Бізнес-логіка товарів:** `client/src/firebase/productsService.ts` (рядки 1-178)
+- **Типи даних:** `client/src/firebase/types.ts`
+- **UI компоненти:** `client/src/components/ui/ProductCard.tsx`
+- **Сторінки:** `client/src/pages/CatalogPage.tsx`, `client/src/pages/AddProductPage.tsx`, `client/src/pages/ProductDetailPage.tsx`
+
+## 🔍 Отладка
+
+**Сервер логує:**
+- Кожен запит: `[datetime] METHOD /path`
+- Помилки: `console.error("Опис", error)`
+- Запуск: `✅ Бекенд працює на порту 3001`
+
+**Фронтенд браузер console:**
+```javascript
+// Отримати токен для тестування API
+await getAuth().currentUser.getIdToken()
+
+// Перевірити, що API настроєний правильно
+const res = await fetch('http://localhost:3001/api/products?limit=5');
+console.log(await res.json());
+```
+
+---
+
+**Останнє оновлення:** 2026-05-10 | **Версія:** 1.1 | **Автор:** AI Agent
+
