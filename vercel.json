@@ -2,9 +2,7 @@
   "version": 2,
   "outputDirectory": "client/dist",
   "functions": {
-    "server/index.js": {
-      "runtime": "vercel-node@latest"
-    }
+    "server/index.js": {}
   },
   "rewrites": [
     {
