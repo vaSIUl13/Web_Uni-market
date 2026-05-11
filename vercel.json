@@ -2,7 +2,9 @@
   "version": 2,
   "outputDirectory": "client/dist",
   "functions": {
-    "server/index.js": {}
+    "server/index.js": {
+      "memory": 1024
+    }
   },
   "rewrites": [
     {
