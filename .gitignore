@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Dependency directories
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+
+# Key and config files
+server/serviceAccountKey.json
+server/.env
+client/.env
+
+# Test files
+server/test.http
