@@ -1,7 +1,7 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useFavorites } from "../../context/FavoritesContext";
+import { animateFlyTo } from "../../utils/animations";
 
 interface ProductCardProps {
   id?: string;
@@ -65,6 +65,7 @@ const ProductCard = ({
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (id) {
+      animateFlyTo(e, 'fav-icon-desktop', 'burger-menu-btn', 'heart');
       toggleFavorite(id);
     }
   };
@@ -72,6 +73,7 @@ const ProductCard = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (id) {
+      animateFlyTo(e, 'cart-icon-desktop', 'burger-menu-btn', 'cart');
       // Reconstruct product object for the cart
       const product = {
         id,

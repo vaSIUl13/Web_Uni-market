@@ -4,6 +4,7 @@ import { getProductById, rateProduct } from '../firebase/productsService';
 import { getAuth } from 'firebase/auth';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { animateFlyTo } from '../utils/animations';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -124,7 +125,8 @@ const ProductDetailPage = () => {
 
           <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-8">
             <button 
-              onClick={() => {
+              onClick={(e) => {
+                animateFlyTo(e, 'cart-icon-desktop', 'burger-menu-btn', 'cart');
                 addToCart(product);
               }}
               className="flex-1 bg-[#3b63f6] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
@@ -135,7 +137,10 @@ const ProductDetailPage = () => {
               В кошик
             </button>
             <button 
-              onClick={() => toggleFavorite(id!)}
+              onClick={(e) => {
+                animateFlyTo(e, 'fav-icon-desktop', 'burger-menu-btn', 'heart');
+                toggleFavorite(id!);
+              }}
               className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors border ${isFavorite(id!) ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-500'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill={isFavorite(id!) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

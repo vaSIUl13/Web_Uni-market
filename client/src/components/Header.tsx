@@ -123,7 +123,7 @@ const Header = () => {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
-          <Link to="/favorites" className="text-gray-500 hover:text-red-500 p-2 transition-colors relative">
+          <Link id="fav-icon-desktop" to="/favorites" className="text-gray-500 hover:text-red-500 p-2 transition-colors relative">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -142,7 +142,7 @@ const Header = () => {
             )}
           </Link>
           
-          <Link to="/cart" className="text-gray-500 hover:text-[#3b63f6] p-2 transition-colors mr-2 relative">
+          <Link id="cart-icon-desktop" to="/cart" className="text-gray-500 hover:text-[#3b63f6] p-2 transition-colors mr-2 relative">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -239,7 +239,8 @@ const Header = () => {
         </div>
 
         <button
-          className="lg:hidden p-2 text-gray-600 hover:text-[#3b63f6] transition-colors z-50"
+          id="burger-menu-btn"
+          className="lg:hidden p-2 text-gray-600 hover:text-[#3b63f6] transition-colors z-50 relative"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? (
