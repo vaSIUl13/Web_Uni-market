@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { fetchFavorites as getApiFavs, addFavorite as addApiFav, removeFavorite as rmApiFav } from "../api/api";
 

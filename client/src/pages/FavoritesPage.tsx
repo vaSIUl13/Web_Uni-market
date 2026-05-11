@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useFavorites } from '../context/FavoritesContext';
 import { getProductById } from '../firebase/productsService';
 import ProductCard from '../components/ui/ProductCard';
@@ -74,8 +74,6 @@ const FavoritesPage = () => {
                   price={product.price}
                   sellerName={product.sellerName}
                   category={product.category || { text: 'Інше', bgClass: 'bg-gray-100', textClass: 'text-gray-600' }}
-                  rating={product.rating}
-                  reviewsCount={product.reviewsCount}
                   views={product.views}
                 />
               </div>

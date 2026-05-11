@@ -1,5 +1,4 @@
 // client/src/pages/Home.tsx
-import React from 'react';
 import Hero from '../components/Hero';
 import StatsBanner from '../components/StatsBanner';
 import Categories from '../components/Categories';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchMyOrders } from '../api/api';
 import { Link } from 'react-router-dom';
 

@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import CatalogSidebar from "../components/CatalogSidebar";
 import ProductCard from "../components/ui/ProductCard";
 import { getProducts, searchProducts } from "../firebase/productsService";
 
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const urlSearchQuery = searchParams.get("search") || "";
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
