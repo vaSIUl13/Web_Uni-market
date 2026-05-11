@@ -5,7 +5,13 @@ const path = require("path");
 const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
 
 try {
-    const serviceAccount = require(serviceAccountPath);
+    let serviceAccount;
+    // На Vercel або іншому сервері ми можемо передати JSON ключа через змінну оточення
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } else {
+        serviceAccount = require(serviceAccountPath);
+    }
 
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
